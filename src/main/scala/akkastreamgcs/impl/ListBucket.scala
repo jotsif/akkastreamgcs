@@ -1,29 +1,53 @@
-package akkastreamsgcs.scaladsl
-
+package akkastreamsgcs.impl
 
 import scala.concurrent.Future
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpMethods.GET
-import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.{HttpRequest, Uri}
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import akkastreamsgcs.{BucketListResponse, GoogleProtocols, BucketObject}
+import akkastreamsgcs.{BucketListResponse, BucketObject, GoogleProtocols}
 import spray.json._
+import akka.http.scaladsl.model.FormData
+import akka.http.scaladsl.model.Uri.Query
 
-object ListBucket extends GoogleProtocols {
-  private val storageuri = "https://www.googleapis.com/storage/v1/b"
+case class ListBucketRequest(
+  bucket: String,
+  delimiter: Option[String],
+  prefix: Option[String],
+  token: String
+)
+
+object ListBucketRequest {
+  def requestToFormData(
+    request: ListBucketRequest,
+    continuation_token: Option[String]
+  ) : FormData = {
+    val uri_builder = Query.newBuilder
+    if(!request.delimiter.isEmpty)
+      uri_builder += (("delimiter", request.delimiter.get))
+    if(!request.prefix.isEmpty)
+      uri_builder += (("prefix", request.prefix.get))
+    if(!continuation_token.isEmpty)
+      uri_builder += (("pageToken", continuation_token.get))
+    FormData(uri_builder.result())
+  }
+}
+
+object ListBucket extends GoogleAPI with GoogleProtocols {
 
   private def listBucketRequest(
     request: ListBucketRequest,
     continuation_token: Option[String]
   ) : HttpRequest = {
-    val token = "testtoken"
     HttpRequest(
       GET,
-      uri = storageuri + "/" + request.bucket + "/o",
-      entity = ListBucketRequest.requestToFormData(request, token, continuation_token).toEntity
+      uri = Uri.from(scheme = scheme, host = host, path = storageuri + "/" + request.bucket + "/o"),
+      headers = List(Authorization(OAuth2BearerToken(request.token))),
+      entity = ListBucketRequest.requestToFormData(request, continuation_token).toEntity
     )
   }
 
@@ -40,7 +64,10 @@ object ListBucket extends GoogleProtocols {
       Http()
         .singleRequest(listBucketRequest(request, continuation_token))
         .flatMap(_.entity.dataBytes.runReduce((a, b) => a++b))
-        .map(_.utf8String.parseJson.convertTo[BucketListResponse])
+        .map(a => {
+          a.utf8String.parseJson.convertTo[BucketListResponse]
+        }
+        )
 
     def fileSourceFromFuture(
       f: Future[BucketListResponse]
@@ -48,7 +75,7 @@ object ListBucket extends GoogleProtocols {
       Source
         .fromFuture(f)
         .flatMapConcat(res => {
-          val keys = Source.fromIterator(() => res.items.toIterator)
+          val keys = Source.fromIterator(() => res.items.getOrElse(Seq()).toIterator)
           if (!res.nextPageToken.isEmpty) {
             keys.concat(fileSourceFromFuture(listBucketCall(res.nextPageToken)))
           } else

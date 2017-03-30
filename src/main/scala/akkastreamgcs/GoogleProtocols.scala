@@ -14,8 +14,8 @@ case class BucketObject(
 case class BucketListResponse(
   kind: String,
   nextPageToken: Option[String],
-  prefixes: Seq[String],
-  items: Seq[BucketObject]
+  prefixes: Option[Seq[String]],
+  items: Option[Seq[BucketObject]]
 )
 
 sealed trait GoogleRequestResponse
