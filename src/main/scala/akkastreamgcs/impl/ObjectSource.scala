@@ -13,18 +13,16 @@ import akka.util.ByteString
 
 object ObjectSource extends GoogleAPI with GoogleProtocols {
 
-  def getObjectRequest(
+  private def getObjectRequest(
     bucket: String,
     file: String,
     token: String
   ) = {
-    val req = HttpRequest(
+    HttpRequest(
       GET,
-      uri = Uri.from(scheme = scheme, host = host, path = storageuri + "/" + bucket + "/o/" + file, queryString = Some("alt=media")),
+      uri = Uri.from(scheme = scheme, host = host, path = storageuri + bucket + "/o/" + file, queryString = Some("alt=media")),
       headers = List(Authorization(OAuth2BearerToken(token)))
     )
-    println(req)
-    req
   }
 
   def create(

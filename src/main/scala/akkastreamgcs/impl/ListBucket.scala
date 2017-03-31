@@ -4,15 +4,14 @@ import scala.concurrent.Future
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{FormData, HttpRequest, Uri}
 import akka.http.scaladsl.model.HttpMethods.GET
-import akka.http.scaladsl.model.{HttpRequest, Uri}
+import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akkastreamsgcs.{BucketListResponse, BucketObject, GoogleProtocols}
 import spray.json._
-import akka.http.scaladsl.model.FormData
-import akka.http.scaladsl.model.Uri.Query
 
 case class ListBucketRequest(
   bucket: String,

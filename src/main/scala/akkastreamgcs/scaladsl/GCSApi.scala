@@ -31,7 +31,13 @@ object GCSAPI {
       token = token
     ))
   }
-  /** get gets a GCS object */
+  /** get gets a GCS object as a ByteString source
+    * 
+    * @param bucket Name of the google bucket
+    * @param file Name of the file
+    * @param token Oauth2 token
+    * 
+    */
   def get(
     bucket: String,
     file: String,
@@ -40,5 +46,11 @@ object GCSAPI {
     implicit system: ActorSystem, mat: ActorMaterializer
   ) : Source[ByteString, akka.NotUsed] = {
     ObjectSource.create(bucket, file, token)
+  }
+  /** upload a file to GCS */
+  def upload(
+
+  ) = {
+
   }
 }
