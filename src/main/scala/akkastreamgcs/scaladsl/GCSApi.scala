@@ -1,11 +1,14 @@
 package akkastreamsgcs.scaladsl
 
+import scala.concurrent.Future
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, Sink}
+import akka.http.scaladsl.model.HttpResponse
 import akka.util.ByteString
 import akkastreamsgcs.BucketObject
-import akkastreamsgcs.impl.{ListBucket, ListBucketRequest, ObjectSource}
+import akkastreamsgcs.impl.{ListBucket, ListBucketRequest, ObjectSource, ObjectSink}
 
 object GCSAPI {
   /** list call lists the contents in a gcs bucket
@@ -47,10 +50,20 @@ object GCSAPI {
   ) : Source[ByteString, akka.NotUsed] = {
     ObjectSource.create(bucket, file, token)
   }
-  /** upload a file to GCS */
+  /** upload a file to GCS using chunks 
+    * 
+    * @param bucket Name of the google bucket
+    * @param file Name of the file
+    * @param token Oauth2 token
+    * 
+    */
   def upload(
-
-  ) = {
-
+    bucket: String,
+    file: String,
+    token: String
+  ) (
+    implicit system: ActorSystem, mat: ActorMaterializer
+  ) : Sink[ByteString, Future[HttpResponse]] = {
+    ObjectSink.create(bucket, file, token)
   }
 }
