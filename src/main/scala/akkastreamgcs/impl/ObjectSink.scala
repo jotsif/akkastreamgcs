@@ -1,18 +1,17 @@
 package akkastreamsgcs.impl
 
-import akka.http.scaladsl.Http
-
 import scala.concurrent.Future
 
-import akkastreamsgcs.GoogleProtocols
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Flow, Keep}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.model.HttpMethods.POST
-import akka.http.scaladsl.model.{HttpRequest, Uri, HttpEntity, ContentTypes, HttpResponse}
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
+import akkastreamsgcs.GoogleProtocols
 
 object ObjectSink extends GoogleAPI with GoogleProtocols {
 

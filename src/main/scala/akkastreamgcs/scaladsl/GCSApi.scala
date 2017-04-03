@@ -3,14 +3,29 @@ package akkastreamsgcs.scaladsl
 import scala.concurrent.Future
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Source, Sink}
 import akka.http.scaladsl.model.HttpResponse
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
-import akkastreamsgcs.BucketObject
-import akkastreamsgcs.impl.{ListBucket, ListBucketRequest, ObjectSource, ObjectSink}
+import akkastreamsgcs.{BucketObject, GoogleRequestResponse}
+import akkastreamsgcs.impl.{ListBucket, ListBucketRequest, ObjectSink, ObjectSource}
+import akkastreamsgcs.auth.Auth
+
 
 object GCSAPI {
+  /** token gets a OAuth2 Bearer token needed for the other API Calls
+    *
+    * @client_email email for the service account
+    * @privatekey PKCS8 formatted private RSA key
+    */
+  def token(
+    client_email: String,
+    privatekey: String
+  ) (
+    implicit system: ActorSystem, mat: ActorMaterializer
+  ): Future[GoogleRequestResponse] = {
+    Auth.getToken(client_email, privatekey)
+  }
   /** list call lists the contents in a gcs bucket
     * 
     * 
