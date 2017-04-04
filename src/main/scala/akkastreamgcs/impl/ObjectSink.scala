@@ -11,7 +11,9 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
-import akkastreamsgcs.GoogleProtocols
+import akkastreamsgcs.{GoogleProtocols, InsertRequestResponse, InsertErrorMessage, BucketObject}
+
+import spray.json._
 
 object ObjectSink extends GoogleAPI with GoogleProtocols {
 
@@ -23,15 +25,16 @@ object ObjectSink extends GoogleAPI with GoogleProtocols {
     val query = Query(Map("uploadType" -> "media", "name" -> file))
     HttpRequest(
       POST,
-      uri = Uri.from(scheme = scheme, host = host, path = uploaduri + bucket + "/o").withQuery(query),
+      uri = Uri.from(scheme = scheme, host = host, path = uploaduri + bucket + "/o")
+        .withQuery(query),
       headers = List(Authorization(OAuth2BearerToken(token)))
     )
   }
 
   /** create creates a Sink uploading the ByteString stream as chunks to GCS
-    * 
+    *
     * How do we regulate the input ByteString sizes?
-    * 
+    *
     */
   def create(
     bucket: String,
@@ -39,17 +42,34 @@ object ObjectSink extends GoogleAPI with GoogleProtocols {
     token: String
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
-  ) : Sink[ByteString, Future[HttpResponse]] = {
+  ) : Sink[ByteString, Future[InsertRequestResponse]] = {
     Flow[ByteString]
       .grouped(1024) // How large are the input ByteStrings ?
       .map(seq => seq.reduce(_ ++ _))
       .prefixAndTail(0)
       .map{case (_, source) => {
-        val req = uploadObjectRequest(bucket, file, token).withEntity(HttpEntity(ContentTypes.`application/octet-stream`, source))
-        println(req)
-        req
+        uploadObjectRequest(bucket, file, token)
+          .withEntity(HttpEntity(ContentTypes.`application/octet-stream`, source))
       }}
       .mapAsync(10)(request => Http().singleRequest(request))
       .toMat(Sink.head)(Keep.right)
+      .mapMaterializedValue(future => {
+        import mat.executionContext
+        future.flatMap(response => {
+          response
+            .entity.dataBytes
+            .runReduce((a, b) => a++b)
+            .map(bytestring => {
+              println(bytestring.utf8String)
+              bytestring.utf8String.parseJson
+            })
+            .map(json => {
+              json.asJsObject.fields.contains("error") match {
+                case true => json.convertTo[InsertErrorMessage]
+                case false => json.convertTo[BucketObject]
+              }
+            })
+        })
+      })
   }
 }

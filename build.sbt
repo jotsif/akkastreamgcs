@@ -2,7 +2,6 @@ import Dependencies._
 
 lazy val jwt = ProjectRef(build = uri("git://github.com/jotsif/jwt.git#issue_12-support_rs256_with_scope"), project = "jwt")
 
-
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(

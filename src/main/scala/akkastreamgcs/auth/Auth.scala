@@ -10,7 +10,7 @@ import akka.http.scaladsl.model.HttpMethods.{POST, GET}
 import akka.http.scaladsl.model.{FormData, HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.Http
-import akkastreamsgcs.{GoogleToken, ErrorMessage, GoogleRequestResponse, GoogleProtocols}
+import akkastreamsgcs.{GoogleToken, ErrorMessage, Oauth2RequestResponse, GoogleProtocols}
 import org.apache.commons.codec.binary.Base64
 import spray.json._
 
@@ -21,6 +21,8 @@ object Auth extends GoogleProtocols {
   private val internaltokenuri = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
   // Permission for reading and writing to gcs
   private val gcsreadwritescope = "https://www.googleapis.com/auth/devstorage.read_write"
+  private val gcsfullcontrolscope = "https://www.googleapis.com/auth/devstorage.full_control"
+
 
   // Get secrets from environment
   lazy private val client_email = sys.env("GCS_READERWRITER_EMAIL")
@@ -39,7 +41,7 @@ object Auth extends GoogleProtocols {
     val expiresAt = now + 3600
     val jwt = new DecodedJwt(
       Seq(Alg(Algorithm.RS256), Typ("JWT")),
-      Seq(Iss(client_email), Aud("https://www.googleapis.com/oauth2/v4/token"), Scope(gcsreadwritescope), Exp(expiresAt), Iat(now))
+      Seq(Iss(client_email), Aud("https://www.googleapis.com/oauth2/v4/token"), Scope(gcsfullcontrolscope), Exp(expiresAt), Iat(now))
     )
     jwt.encodedAndSigned(Base64.decodeBase64(privatekey))
   }
@@ -72,7 +74,7 @@ object Auth extends GoogleProtocols {
 
   def tokenResponseToToken(
     response: HttpResponse
-  ) (implicit mat: ActorMaterializer) : Future[GoogleRequestResponse] = {
+  ) (implicit mat: ActorMaterializer) : Future[Oauth2RequestResponse] = {
     import mat.executionContext
     response
       .entity.dataBytes
@@ -88,6 +90,8 @@ object Auth extends GoogleProtocols {
 
   /** getToken gets a token by sending a token request to Google
     * 
+    * FIXME: Controll access scope here
+    * 
     * @client_email email for the service account
     * @privatekey PKCS8 formatted private RSA key
     */
@@ -96,7 +100,7 @@ object Auth extends GoogleProtocols {
     privatekey: String
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
-  ): Future[GoogleRequestResponse] = {
+  ): Future[Oauth2RequestResponse] = {
     import mat.executionContext
     Http()
       .singleRequest(tokenRequest(client_email, privatekey))
@@ -105,7 +109,7 @@ object Auth extends GoogleProtocols {
   /** getToken gets a token from internal metadata servers */
   def getToken(
     implicit system: ActorSystem, mat: ActorMaterializer
-  ) : Future[GoogleRequestResponse] = {
+  ) : Future[Oauth2RequestResponse] = {
     import mat.executionContext
     Http()
       .singleRequest(tokenRequest)

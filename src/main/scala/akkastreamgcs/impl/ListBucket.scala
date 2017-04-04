@@ -44,7 +44,7 @@ object ListBucket extends GoogleAPI with GoogleProtocols {
   ) : HttpRequest = {
     HttpRequest(
       GET,
-      uri = Uri.from(scheme = scheme, host = host, path = storageuri + "/" + request.bucket + "/o"),
+      uri = Uri.from(scheme = scheme, host = host, path = storageuri + request.bucket + "/o"),
       headers = List(Authorization(OAuth2BearerToken(request.token))),
       entity = ListBucketRequest.requestToFormData(request, continuation_token).toEntity
     )
@@ -65,8 +65,7 @@ object ListBucket extends GoogleAPI with GoogleProtocols {
         .flatMap(_.entity.dataBytes.runReduce((a, b) => a++b))
         .map(a => {
           a.utf8String.parseJson.convertTo[BucketListResponse]
-        }
-        )
+        })
 
     def fileSourceFromFuture(
       f: Future[BucketListResponse]

@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.HttpResponse
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
-import akkastreamsgcs.{BucketObject, GoogleRequestResponse}
+import akkastreamsgcs.{BucketObject, Oauth2RequestResponse, InsertRequestResponse}
 import akkastreamsgcs.impl.{ListBucket, ListBucketRequest, ObjectSink, ObjectSource}
 import akkastreamsgcs.auth.Auth
 
@@ -23,7 +23,7 @@ object GCSAPI {
     privatekey: String
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
-  ): Future[GoogleRequestResponse] = {
+  ): Future[Oauth2RequestResponse] = {
     Auth.getToken(client_email, privatekey)
   }
   /** list call lists the contents in a gcs bucket
@@ -67,6 +67,8 @@ object GCSAPI {
   }
   /** upload a file to GCS using chunks 
     * 
+    * Uploading to an already existing object requires delete permissions
+    * 
     * @param bucket Name of the google bucket
     * @param file Name of the file
     * @param token Oauth2 token
@@ -78,7 +80,7 @@ object GCSAPI {
     token: String
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
-  ) : Sink[ByteString, Future[HttpResponse]] = {
+  ) : Sink[ByteString, Future[InsertRequestResponse]] = {
     ObjectSink.create(bucket, file, token)
   }
 }
