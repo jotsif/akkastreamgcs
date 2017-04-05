@@ -27,7 +27,24 @@ class ListBucketSpec extends FlatSpec with BeforeAndAfterAll with Matchers with 
     val sourceready = Await.ready(source, 10.seconds)
     sourceready.futureValue.name should be ("1490144541256")
   }
+  it should "be able to use prefix as a filter" in {
+    import mat.executionContext
+    val tokenresp = Auth.getToken(email, pk)
+    val source = tokenresp
+      .flatMap(token => {
+        val request = ListBucketRequest(
+          "ru-recorder",
+          prefix = Some("recordunion/streams/2017/03/18"),
+          delimiter = None,
+          token = token.asInstanceOf[GoogleToken].access_token
+        )
+        ListBucket.list(request).runWith(Sink.head)
+      })
+    val sourceready = Await.ready(source, 10.seconds)
+    sourceready.futureValue.name should be ("recordunion/streams/2017/03/18/")
+
+  }
   override def afterAll = {
     as.terminate()
-  } 
+  }
 }

@@ -4,7 +4,7 @@ import scala.concurrent.Future
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{FormData, HttpRequest, Uri}
+import akka.http.scaladsl.model.{HttpRequest, Uri}
 import akka.http.scaladsl.model.HttpMethods.GET
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
@@ -24,7 +24,7 @@ object ListBucketRequest {
   def requestToFormData(
     request: ListBucketRequest,
     continuation_token: Option[String]
-  ) : FormData = {
+  ) : Uri.Query = {
     val uri_builder = Query.newBuilder
     if(!request.delimiter.isEmpty)
       uri_builder += (("delimiter", request.delimiter.get))
@@ -32,7 +32,7 @@ object ListBucketRequest {
       uri_builder += (("prefix", request.prefix.get))
     if(!continuation_token.isEmpty)
       uri_builder += (("pageToken", continuation_token.get))
-    FormData(uri_builder.result())
+    uri_builder.result()
   }
 }
 
@@ -42,11 +42,16 @@ object ListBucket extends GoogleAPI with GoogleProtocols {
     request: ListBucketRequest,
     continuation_token: Option[String]
   ) : HttpRequest = {
+    val request_uri = Uri.from(
+      scheme = scheme,
+      host = host,
+      path = storageuri + request.bucket + "/o"
+    )
+      .withQuery(ListBucketRequest.requestToFormData(request, continuation_token))
     HttpRequest(
       GET,
-      uri = Uri.from(scheme = scheme, host = host, path = storageuri + request.bucket + "/o"),
-      headers = List(Authorization(OAuth2BearerToken(request.token))),
-      entity = ListBucketRequest.requestToFormData(request, continuation_token).toEntity
+      uri = request_uri,
+      headers = List(Authorization(OAuth2BearerToken(request.token)))
     )
   }
 
@@ -59,14 +64,15 @@ object ListBucket extends GoogleAPI with GoogleProtocols {
     import mat.executionContext
     def listBucketCall(
       continuation_token: Option[String] = None
-    ) : Future[BucketListResponse] =
+    ) : Future[BucketListResponse] = {
+      val httprequest = listBucketRequest(request, continuation_token)
       Http()
-        .singleRequest(listBucketRequest(request, continuation_token))
+        .singleRequest(httprequest)
         .flatMap(_.entity.dataBytes.runReduce((a, b) => a++b))
         .map(a => {
           a.utf8String.parseJson.convertTo[BucketListResponse]
         })
-
+    }
     def fileSourceFromFuture(
       f: Future[BucketListResponse]
     ): Source[BucketObject, akka.NotUsed] =
