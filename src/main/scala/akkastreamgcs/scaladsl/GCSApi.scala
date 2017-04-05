@@ -3,7 +3,6 @@ package akkastreamsgcs.scaladsl
 import scala.concurrent.Future
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.HttpResponse
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
@@ -28,6 +27,7 @@ object GCSAPI {
   }
   /** list call lists the contents in a gcs bucket
     * 
+    * It returns the directory as well, with size 0
     * 
     * @param bucket Name of the google bucket
     * @param prefix prefix to use to filter the result
