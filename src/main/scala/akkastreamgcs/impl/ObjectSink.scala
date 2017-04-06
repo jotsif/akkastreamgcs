@@ -44,14 +44,18 @@ object ObjectSink extends GoogleAPI with GoogleProtocols {
     implicit system: ActorSystem, mat: ActorMaterializer
   ) : Sink[ByteString, Future[InsertRequestResponse]] = {
     Flow[ByteString]
-      .grouped(chunkgroup) // How large are the input ByteStrings ?
-      .map(seq => seq.reduce(_ ++ _))
       .prefixAndTail(0)
       .map{case (_, source) => {
         uploadObjectRequest(bucket, file, token)
-          .withEntity(HttpEntity(ContentTypes.`application/octet-stream`, source))
+          .withEntity(
+            HttpEntity(ContentTypes.`application/octet-stream`,
+              source
+                .grouped(chunkgroup) // How large are the input ByteStrings ?
+                .map(seq => seq.reduce(_ ++ _))
+            )
+          )
       }}
-      .mapAsync(10)(request => Http().singleRequest(request))
+      .mapAsync(1)(request => Http().singleRequest(request))
       .toMat(Sink.head)(Keep.right)
       .mapMaterializedValue(future => {
         import mat.executionContext

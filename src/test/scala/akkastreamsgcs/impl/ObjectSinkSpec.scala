@@ -31,7 +31,7 @@ class ObjectSinkSpec extends FlatSpec with BeforeAndAfterAll with Matchers with 
     val source = tokenresp
       .flatMap(token => {
         FileIO.fromPath(file, 256)
-          .toMat(ObjectSink.create("ru-recorder", "/subdirectory/1490144541256", token.asInstanceOf[GoogleToken].access_token))(Keep.right)
+          .toMat(ObjectSink.create("ru-recorder", "subdirectory/1490144541256", token.asInstanceOf[GoogleToken].access_token))(Keep.right)
           .run()
       })
     val sourceready = Await.ready(source, 100.seconds)
