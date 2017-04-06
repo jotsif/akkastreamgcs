@@ -23,11 +23,6 @@ object Auth extends GoogleProtocols {
   private val gcsreadwritescope = "https://www.googleapis.com/auth/devstorage.read_write"
   private val gcsfullcontrolscope = "https://www.googleapis.com/auth/devstorage.full_control"
 
-
-  // Get secrets from environment
-  lazy private val client_email = sys.env("GCS_READERWRITER_EMAIL")
-  lazy private val privatekey = sys.env("GCS_PRIVATE_PRIVATEKEY")
-
   /** Create JWT for reading and writing to GCS 
     * 
     * @client_email email for the service account

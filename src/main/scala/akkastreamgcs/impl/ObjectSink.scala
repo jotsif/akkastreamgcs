@@ -4,15 +4,14 @@ import scala.concurrent.Future
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse, Uri}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, Uri}
 import akka.http.scaladsl.model.HttpMethods.POST
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
-import akkastreamsgcs.{GoogleProtocols, InsertRequestResponse, InsertErrorMessage, BucketObject}
-
+import akkastreamsgcs.{BucketObject, GoogleProtocols, InsertErrorMessage, InsertRequestResponse}
 import spray.json._
 
 object ObjectSink extends GoogleAPI with GoogleProtocols {
@@ -39,12 +38,13 @@ object ObjectSink extends GoogleAPI with GoogleProtocols {
   def create(
     bucket: String,
     file: String,
-    token: String
+    token: String,
+    chunkgroup: Int = 1024
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
   ) : Sink[ByteString, Future[InsertRequestResponse]] = {
     Flow[ByteString]
-      .grouped(1024) // How large are the input ByteStrings ?
+      .grouped(chunkgroup) // How large are the input ByteStrings ?
       .map(seq => seq.reduce(_ ++ _))
       .prefixAndTail(0)
       .map{case (_, source) => {
@@ -60,7 +60,6 @@ object ObjectSink extends GoogleAPI with GoogleProtocols {
             .entity.dataBytes
             .runReduce((a, b) => a++b)
             .map(bytestring => {
-              println(bytestring.utf8String)
               bytestring.utf8String.parseJson
             })
             .map(json => {

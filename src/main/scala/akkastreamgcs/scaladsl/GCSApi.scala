@@ -72,15 +72,17 @@ object GCSAPI {
     * @param bucket Name of the google bucket
     * @param file Name of the file
     * @param token Oauth2 token
+    * @param chunksize Parameter needed for deciding chunk size for file upload
     * 
     */
   def upload(
     bucket: String,
     file: String,
-    token: String
+    token: String,
+    chunksize: Int = 1024
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
   ) : Sink[ByteString, Future[InsertRequestResponse]] = {
-    ObjectSink.create(bucket, file, token)
+    ObjectSink.create(bucket, file, token, chunksize)
   }
 }

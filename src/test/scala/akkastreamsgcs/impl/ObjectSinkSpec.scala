@@ -20,7 +20,7 @@ class ObjectSinkSpec extends FlatSpec with BeforeAndAfterAll with Matchers with 
   val conf = ConfigFactory.parseMap(Map("akka.http.client.parsing.max-content-length" -> "100000000").asJava)
   implicit val as = ActorSystem("testsystem", conf)
   implicit val mat = ActorMaterializer()
-  val pk = sys.env("GCS_PRIVATE_KEY")
+  val pk = sys.env("GCS_PRIVATE_KEY").replaceAll("""\\n""", "\n")
   val email = sys.env("GCS_CLIENT_EMAIL")
   val filename = "/1490345649316.gz"
   val file = Paths.get(getClass.getResource(filename).toURI())
@@ -31,7 +31,7 @@ class ObjectSinkSpec extends FlatSpec with BeforeAndAfterAll with Matchers with 
     val source = tokenresp
       .flatMap(token => {
         FileIO.fromPath(file, 256)
-          .toMat(ObjectSink.create("ru-recorder", "1490144541256", token.asInstanceOf[GoogleToken].access_token))(Keep.right)
+          .toMat(ObjectSink.create("ru-recorder", "/subdirectory/1490144541256", token.asInstanceOf[GoogleToken].access_token))(Keep.right)
           .run()
       })
     val sourceready = Await.ready(source, 100.seconds)

@@ -23,9 +23,9 @@ class ObjectSourceSpec extends FlatSpec with BeforeAndAfterAll with Matchers wit
     val tokenresp = Auth.getToken(email, pk)
     val source = tokenresp
       .flatMap(token => {
-        ObjectSource.create("ru-recorder", "recordunion/streams/2017/03/01/CY", token.asInstanceOf[GoogleToken].access_token).via(Compression.gunzip()).runWith(Sink.last)
+        ObjectSource.create("ru-recorder", "recordunion/streams/2017/03/01/CY", token.asInstanceOf[GoogleToken].access_token).via(Compression.gunzip()).runWith(Sink.head)
       })
     val sourceready = Await.ready(source, 60.seconds)
-    sourceready.futureValue.head should be (31)
+    sourceready.futureValue.head should be (71)
   }
 }
