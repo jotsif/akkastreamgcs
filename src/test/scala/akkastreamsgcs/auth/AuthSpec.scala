@@ -18,7 +18,7 @@ class AuthSpec extends FlatSpec with BeforeAndAfterAll with Matchers with ScalaF
   val email = "test@test.nu"
 
   "Auth" should "create a correct token request" in {
-    val tokenrequest = Auth.tokenRequest(email, pk)
+    val tokenrequest = Auth.tokenRequest(email, pk, Seq(Auth.GcsFullControlScope))
     tokenrequest.entity.contentType should be (ContentType(`application/x-www-form-urlencoded`, HttpCharsets.`UTF-8`))
   }
   it should "be able to send request to Google" in { 
