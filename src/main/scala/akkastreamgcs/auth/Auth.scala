@@ -20,23 +20,25 @@ object Auth extends GoogleProtocols {
   // URI for internal metadata token request
   private val internaltokenuri = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
   // Permission for reading and writing to gcs
-  private val gcsreadwritescope = "https://www.googleapis.com/auth/devstorage.read_write"
-  private val gcsfullcontrolscope = "https://www.googleapis.com/auth/devstorage.full_control"
+  val GcsReadWriteScope = Scope("https://www.googleapis.com/auth/devstorage.read_write")
+  val GcsFullControlScope = Scope("https://www.googleapis.com/auth/devstorage.full_control")
+  val KmsScope = Scope("https://www.googleapis.com/auth/cloud-platform")
 
   /** Create JWT for reading and writing to GCS 
     * 
-    * @client_email email for the service account
-    * @privatekey PKCS8 formatted private RSA key
+    * @param client_email email for the service account
+    * @param privatekey PKCS8 formatted private RSA key
     */
   private[auth] def createJWT(
     client_email: String,
-    privatekey: String
+    privatekey: String,
+    scopes : Seq[Scope]
   ) : String = {
     val now = (new Date()).getTime()/1000
     val expiresAt = now + 3600
     val jwt = new DecodedJwt(
       Seq(Alg(Algorithm.RS256), Typ("JWT")),
-      Seq(Iss(client_email), Aud("https://www.googleapis.com/oauth2/v4/token"), Scope(gcsfullcontrolscope), Exp(expiresAt), Iat(now))
+      Seq(Iss(client_email), Aud("https://www.googleapis.com/oauth2/v4/token"), Exp(expiresAt), Iat(now)) ++ scopes
     )
     jwt.encodedAndSigned(Base64.decodeBase64(privatekey))
   }
@@ -44,17 +46,19 @@ object Auth extends GoogleProtocols {
     * 
     * @client_email email for the service account
     * @privatekey PKCS8 formatted private RSA key
+    * @param list of scopes for the request
     */
   private[auth] def tokenRequest(
     client_email: String,
-    privatekey: String
+    privatekey: String,
+    scopes : Seq[Scope]
   ) : HttpRequest = {
     HttpRequest(
       POST,
       uri = tokenuri,
       entity = FormData(Map(
         "grant_type" -> "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        "assertion" -> createJWT(client_email, privatekey)
+        "assertion" -> createJWT(client_email, privatekey, scopes)
       )).toEntity
     )
   }
@@ -92,13 +96,14 @@ object Auth extends GoogleProtocols {
     */
   def getToken(
     client_email: String,
-    privatekey: String
+    privatekey: String,
+    scopes : Seq[Scope] = Seq(Auth.GcsFullControlScope)
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
   ): Future[Oauth2RequestResponse] = {
     import mat.executionContext
     Http()
-      .singleRequest(tokenRequest(client_email, privatekey))
+      .singleRequest(tokenRequest(client_email, privatekey, scopes))
       .flatMap(response => tokenResponseToToken(response))
   }
   /** getToken gets a token from internal metadata servers */

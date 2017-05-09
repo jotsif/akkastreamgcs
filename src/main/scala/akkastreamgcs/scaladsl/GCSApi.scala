@@ -9,21 +9,22 @@ import akka.util.ByteString
 import akkastreamsgcs.{BucketObject, Oauth2RequestResponse, InsertRequestResponse}
 import akkastreamsgcs.impl.{ListBucket, ListBucketRequest, ObjectSink, ObjectSource}
 import akkastreamsgcs.auth.Auth
-
+import io.igl.jwt.Scope
 
 object GCSAPI {
   /** token gets a OAuth2 Bearer token needed for the other API Calls
     *
-    * @client_email email for the service account
-    * @privatekey PKCS8 formatted private RSA key
+    * @param client_email email for the service account
+    * @param privatekey PKCS8 formatted private RSA key
     */
   def token(
     client_email: String,
-    privatekey: String
+    privatekey: String,
+    scopes: Seq[Scope]
   ) (
     implicit system: ActorSystem, mat: ActorMaterializer
   ): Future[Oauth2RequestResponse] = {
-    Auth.getToken(client_email, privatekey)
+    Auth.getToken(client_email, privatekey, scopes)
   }
   /** list call lists the contents in a gcs bucket
     * 
