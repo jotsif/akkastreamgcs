@@ -1,7 +1,5 @@
 import Dependencies._
 
-lazy val jwt = ProjectRef(build = uri("git://github.com/iain-logan/jwt"), project = "jwt")
-
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
@@ -10,6 +8,6 @@ lazy val root = (project in file(".")).
       version      := "0.2.0"
     )),
     name := "AkkaStreamGCS",
-    libraryDependencies ++= Seq(scalaTest, akka_http, spray_json)
+    libraryDependencies ++= Seq(scalaTest, akka_http, spray_json, jwt)
   )
-  .dependsOn(jwt)
+
